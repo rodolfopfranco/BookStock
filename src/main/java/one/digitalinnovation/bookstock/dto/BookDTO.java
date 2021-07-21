@@ -17,6 +17,7 @@ import javax.validation.constraints.Size;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BookDTO {
+
     private Long id;
 
     @NotNull
@@ -37,5 +38,5 @@ public class BookDTO {
 
     @Enumerated(EnumType.STRING)
     @NotNull
-    private BookGenre type;
+    private BookGenre genre;
 }

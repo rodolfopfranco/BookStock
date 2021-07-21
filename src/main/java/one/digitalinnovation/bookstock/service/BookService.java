@@ -21,6 +21,7 @@ public class BookService {
     private final BookRepository bookRepository;
     private final BookMapper bookMapper = BookMapper.INSTANCE;
 
+
     public BookDTO createBook(BookDTO bookDTO) throws BookAlreadyRegisteredException {
         verifyIfIsAlreadyRegistered(bookDTO.getName());
         Book book = bookMapper.toModel(bookDTO);
