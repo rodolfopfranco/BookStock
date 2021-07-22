@@ -4,6 +4,7 @@ import one.digitalinnovation.bookstock.builder.BookDTOBuilder;
 import one.digitalinnovation.bookstock.dto.BookDTO;
 import one.digitalinnovation.bookstock.entity.Book;
 import one.digitalinnovation.bookstock.exception.BookAlreadyRegisteredException;
+import one.digitalinnovation.bookstock.exception.BookNotFoundException;
 import one.digitalinnovation.bookstock.mapper.BookMapper;
 import one.digitalinnovation.bookstock.repository.BookRepository;
 import org.hamcrest.MatcherAssert;
@@ -77,13 +78,37 @@ class BookServiceTest {
         //Create a mock object:
         BookDTO expectedBookDTO = BookDTOBuilder.builder().build().toBookDTO();
         Book duplicatedBook = bookMapper.toModel(expectedBookDTO);
-
         //When
         when(bookRepository.findByName((expectedBookDTO.getName()))).thenReturn(Optional.of(duplicatedBook));
-
         //Create another book of the same name and tries to get the error:
         assertThrows(BookAlreadyRegisteredException.class, () -> bookService.createBook(expectedBookDTO));
     }
+
+    @Test
+    void whenValidBookNameThenReturnABook() throws BookNotFoundException {
+        //Given:
+        BookDTO expectedFoundBookDTO = BookDTOBuilder.builder().build().toBookDTO();
+        Book expectedFoundBook = bookMapper.toModel(expectedFoundBookDTO);
+        //When
+        when(bookRepository.findByName(expectedFoundBook.getName()))
+                .thenReturn(Optional.of(expectedFoundBook));
+        //Then
+        BookDTO foundBookDTO = bookService.findByName(expectedFoundBookDTO.getName());
+        assertThat(foundBookDTO, is(equalTo(expectedFoundBookDTO)));
+    }
+
+    @Test
+    void whenNoRegisteredBookNameGivenThenThrowsException() throws BookNotFoundException {
+        //Given:
+        BookDTO expectedFoundBookDTO = BookDTOBuilder.builder().build().toBookDTO();
+        Book expectedFoundBook = bookMapper.toModel(expectedFoundBookDTO);
+        //When
+        when(bookRepository.findByName(expectedFoundBook.getName()))
+                .thenReturn(Optional.empty());
+        //Then
+        assertThrows(BookNotFoundException.class, () -> bookService.findByName(expectedFoundBookDTO.getName()));
+    }
+
 
 
 }

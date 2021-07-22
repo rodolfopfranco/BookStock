@@ -2,6 +2,7 @@ package one.digitalinnovation.bookstock.controller;
 
 import one.digitalinnovation.bookstock.builder.BookDTOBuilder;
 import one.digitalinnovation.bookstock.dto.BookDTO;
+import one.digitalinnovation.bookstock.exception.BookNotFoundException;
 import one.digitalinnovation.bookstock.service.BookService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,11 +14,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.view.json.MappingJackson2JsonView;
 
 import static one.digitalinnovation.bookstock.utils.JsonConvertionUtils.asJsonString;
 import static org.hamcrest.core.Is.is;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -63,5 +66,44 @@ class BookControllerTest {
                 .andExpect(jsonPath("$.name",is(bookDTO.getName())))
                 .andExpect(jsonPath("$.author",is(bookDTO.getAuthor())))
                 .andExpect(jsonPath("$.genre",is(bookDTO.getGenre().toString())));
+    }
+
+    @Test
+    void whenPOSTIsCalledWithoutRequiredFieldsThenErrorIsReturned() throws Exception {
+        //Given:
+        BookDTO bookDTO = BookDTOBuilder.builder().build().toBookDTO();
+        bookDTO.setAuthor(null);
+
+        //Then:
+        mockMvc.perform(post(BOOK_API_URL_PATH)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(bookDTO)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void whenGETIsCalledWithValidNameThenReturnsOkStatus() throws Exception {
+        //Given:
+        BookDTO bookDTO = BookDTOBuilder.builder().build().toBookDTO();
+        //When:
+        when(bookService.findByName(bookDTO.getName())).thenReturn(bookDTO);
+        //Then:
+        mockMvc.perform(MockMvcRequestBuilders.get(BOOK_API_URL_PATH+"/"+bookDTO.getName())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.name",is(bookDTO.getName())))
+                .andExpect(jsonPath("$.author",is(bookDTO.getAuthor())))
+                .andExpect(jsonPath("$.genre",is(bookDTO.getGenre().toString())));
+    }
+
+    @Test
+    void whenGETIsCalledWithoutRegisteredNameThenReturnsNotFoundStatus() throws Exception {
+        //Given:
+        BookDTO bookDTO = BookDTOBuilder.builder().build().toBookDTO();
+        //When:
+        when(bookService.findByName(bookDTO.getName())).thenThrow(BookNotFoundException.class);
+        //Then:
+        mockMvc.perform(MockMvcRequestBuilders.get(BOOK_API_URL_PATH+"/"+bookDTO.getName())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
     }
 }
