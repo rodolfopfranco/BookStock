@@ -18,9 +18,11 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.servlet.view.json.MappingJackson2JsonView;
 
+import java.util.Collections;
+
 import static one.digitalinnovation.bookstock.utils.JsonConvertionUtils.asJsonString;
 import static org.hamcrest.core.Is.is;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -103,6 +105,59 @@ class BookControllerTest {
         when(bookService.findByName(bookDTO.getName())).thenThrow(BookNotFoundException.class);
         //Then:
         mockMvc.perform(MockMvcRequestBuilders.get(BOOK_API_URL_PATH+"/"+bookDTO.getName())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void whenGETBookListIsCalledThenReturnsOkStatus() throws Exception {
+        //Given:
+        BookDTO bookDTO = BookDTOBuilder.builder().build().toBookDTO();
+        //When:
+        when(bookService.listAll()).thenReturn(Collections.singletonList(bookDTO));
+        //Then:
+        //$[0]. is a Hamcrest way of getting list data
+        mockMvc.perform(MockMvcRequestBuilders.get(BOOK_API_URL_PATH)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name",is(bookDTO.getName())))
+                .andExpect(jsonPath("$[0].author",is(bookDTO.getAuthor())))
+                .andExpect(jsonPath("$[0].genre",is(bookDTO.getGenre().toString())));
+    }
+
+    @Test
+    void whenGETBookListIsCalledWithoutBooksThenReturnsOkStatus() throws Exception {
+        //Given:
+        BookDTO bookDTO = BookDTOBuilder.builder().build().toBookDTO();
+        //When:
+        when(bookService.listAll()).thenReturn(Collections.singletonList(bookDTO));
+        //Then:
+        mockMvc.perform(MockMvcRequestBuilders.get(BOOK_API_URL_PATH)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name",is(bookDTO.getName())))
+                .andExpect(jsonPath("$[0].author",is(bookDTO.getAuthor())))
+                .andExpect(jsonPath("$[0].genre",is(bookDTO.getGenre().toString())));
+    }
+
+    @Test
+    void whenDELETEIsCalledWithValidIdThenReturnsNoContentStatus() throws Exception {
+        //Given:
+        BookDTO bookDTO = BookDTOBuilder.builder().build().toBookDTO();
+        //When:
+        doNothing().when(bookService).deleteById(bookDTO.getId());
+        //Then:
+        mockMvc.perform(MockMvcRequestBuilders.delete(BOOK_API_URL_PATH+"/"+bookDTO.getId())
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void whenDELETEIsCalledWithInvalidIdThenReturnsNoContentStatus() throws Exception {
+        //When:
+        doThrow(BookNotFoundException.class).when(bookService).deleteById(INVALID_BOOK_ID);
+        //Then:
+        mockMvc.perform(MockMvcRequestBuilders.delete(BOOK_API_URL_PATH+"/"+INVALID_BOOK_ID)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }

@@ -109,6 +109,41 @@ class BookServiceTest {
         assertThrows(BookNotFoundException.class, () -> bookService.findByName(expectedFoundBookDTO.getName()));
     }
 
+    @Test
+    void whenListBookIsCalledThenReturnsListOfBooks(){
+        //Given:
+        BookDTO expectedFoundBookDTO = BookDTOBuilder.builder().build().toBookDTO();
+        Book expectedFoundBook = bookMapper.toModel(expectedFoundBookDTO);
+        //When:
+        when(bookRepository.findAll()).thenReturn(Collections.singletonList(expectedFoundBook));
+        //Then:
+        List<BookDTO> foundBookDTO = bookService.listAll();
+        assertThat(foundBookDTO,is(not(empty())));
+        assertThat(foundBookDTO.get(0),is(equalTo(expectedFoundBookDTO)));
+    }
+
+    @Test
+    void whenListBookIsCalledThenReturnsEmptyList(){
+        //When:
+        when(bookRepository.findAll()).thenReturn(Collections.EMPTY_LIST);
+        //Then:
+        List<BookDTO> foundListBooksDTO = bookService.listAll();
+        assertThat(foundListBooksDTO,is(empty()));
+    }
+
+    @Test
+    void whenExclusionSCalledWithValidNameThenDeleteBook() throws BookNotFoundException {
+        BookDTO expectedDeletedBookDTO = BookDTOBuilder.builder().build().toBookDTO();
+        Book expectedDeletedBook = bookMapper.toModel((expectedDeletedBookDTO));
+        //When:
+        when(bookRepository.findById(expectedDeletedBookDTO.getId())).thenReturn(Optional.of(expectedDeletedBook));
+        doNothing().when(bookRepository).deleteById(expectedDeletedBookDTO.getId());
+        //Then
+        bookService.deleteById((expectedDeletedBookDTO.getId()));
+        //verify for watching if it's executed correctly, not if it deleted indeed, since there's no return value
+        verify(bookRepository,Mockito.times(1)).findById(expectedDeletedBookDTO.getId());
+        verify(bookRepository,Mockito.times(1)).deleteById((expectedDeletedBookDTO.getId()));
+    }
 
 
 }
