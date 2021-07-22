@@ -5,6 +5,7 @@ import one.digitalinnovation.bookstock.dto.BookDTO;
 import one.digitalinnovation.bookstock.entity.Book;
 import one.digitalinnovation.bookstock.exception.BookAlreadyRegisteredException;
 import one.digitalinnovation.bookstock.exception.BookNotFoundException;
+import one.digitalinnovation.bookstock.exception.BookStockExceededException;
 import one.digitalinnovation.bookstock.mapper.BookMapper;
 import one.digitalinnovation.bookstock.repository.BookRepository;
 import org.hamcrest.MatcherAssert;
@@ -102,10 +103,10 @@ class BookServiceTest {
         //Given:
         BookDTO expectedFoundBookDTO = BookDTOBuilder.builder().build().toBookDTO();
         Book expectedFoundBook = bookMapper.toModel(expectedFoundBookDTO);
-        //When
+        //When:
         when(bookRepository.findByName(expectedFoundBook.getName()))
                 .thenReturn(Optional.empty());
-        //Then
+        //Then:
         assertThrows(BookNotFoundException.class, () -> bookService.findByName(expectedFoundBookDTO.getName()));
     }
 
@@ -143,6 +144,56 @@ class BookServiceTest {
         //verify for watching if it's executed correctly, not if it deleted indeed, since there's no return value
         verify(bookRepository,Mockito.times(1)).findById(expectedDeletedBookDTO.getId());
         verify(bookRepository,Mockito.times(1)).deleteById((expectedDeletedBookDTO.getId()));
+    }
+
+    @Test
+    void whenIncrementCalledThenIncrementBookStock() throws BookNotFoundException, BookStockExceededException {
+        ///GIVEN:
+        BookDTO expectedBookDTO = BookDTOBuilder.builder().build().toBookDTO();
+        Book expectedBook = bookMapper.toModel(expectedBookDTO);
+        //WHEN:
+        when(bookRepository.findById(expectedBookDTO.getId())).thenReturn(Optional.of(expectedBook));
+        when(bookRepository.save(expectedBook)).thenReturn(expectedBook);
+        int quantityToIncrement = 10;
+        int expectedQuantityAfterIncrement = expectedBookDTO.getQuantity() + quantityToIncrement;
+        //THEN:
+        BookDTO incrementedBookDTO = bookService.increment(expectedBookDTO.getId(), quantityToIncrement);
+        assertThat(expectedQuantityAfterIncrement, equalTo(incrementedBookDTO.getQuantity()));
+        assertThat(expectedQuantityAfterIncrement, lessThan(expectedBookDTO.getMax()));
+    }
+
+    @Test
+    void whenIncrementIsGreatherThanMaxThenThrowException() {
+        //Given:
+        BookDTO expectedBookDTO = BookDTOBuilder.builder().build().toBookDTO();
+        Book expectedBook = bookMapper.toModel(expectedBookDTO);
+        //When:
+        when(bookRepository.findById(expectedBookDTO.getId())).thenReturn(Optional.of(expectedBook));
+        int quantityToIncrement = 100;
+        //Then:
+        assertThrows(BookStockExceededException.class, () -> bookService.increment(expectedBookDTO.getId(), quantityToIncrement));
+    }
+
+    @Test
+    void whenIncrementAfterSumIsGreatherThanMaxThenThrowException() {
+        //Given:
+        BookDTO expectedBookDTO = BookDTOBuilder.builder().build().toBookDTO();
+        Book expectedBook = bookMapper.toModel(expectedBookDTO);
+        //When:
+        when(bookRepository.findById(expectedBookDTO.getId())).thenReturn(Optional.of(expectedBook));
+        int quantityToIncrement = 45;
+        //Then:
+        assertThrows(BookStockExceededException.class, () -> bookService.increment(expectedBookDTO.getId(), quantityToIncrement));
+    }
+
+    @Test
+    void whenIncrementIsCalledWithInvalidIdThenThrowException() {
+        //Given:
+        int quantityToIncrement = 10;
+        //When:
+        when(bookRepository.findById(INVALID_BOOK_ID)).thenReturn(Optional.empty());
+        //Then:
+        assertThrows(BookNotFoundException.class, () -> bookService.increment(INVALID_BOOK_ID, quantityToIncrement));
     }
 
 

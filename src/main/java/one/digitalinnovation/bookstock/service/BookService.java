@@ -5,6 +5,7 @@ import one.digitalinnovation.bookstock.dto.BookDTO;
 import one.digitalinnovation.bookstock.entity.Book;
 import one.digitalinnovation.bookstock.exception.BookAlreadyRegisteredException;
 import one.digitalinnovation.bookstock.exception.BookNotFoundException;
+import one.digitalinnovation.bookstock.exception.BookStockExceededException;
 import one.digitalinnovation.bookstock.mapper.BookMapper;
 import one.digitalinnovation.bookstock.repository.BookRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +46,17 @@ public class BookService {
     public void deleteById(Long id) throws BookNotFoundException {
         verifyIfExists(id);
         bookRepository.deleteById(id);
+    }
+
+    public BookDTO increment(Long id, int quantityToIncrement) throws BookNotFoundException, BookStockExceededException {
+        //Increments value on Book DTO
+        Book bookToIncrementStock = verifyIfExists(id);
+        if (quantityToIncrement+bookToIncrementStock.getQuantity() <= bookToIncrementStock.getMax()){
+            bookToIncrementStock.setQuantity(bookToIncrementStock.getQuantity()+quantityToIncrement);
+            Book incrementedBookStock = bookRepository.save(bookToIncrementStock);
+            return bookMapper.toDTO(incrementedBookStock);
+        }
+        throw new BookStockExceededException(id,quantityToIncrement);
     }
 
     private void verifyIfIsAlreadyRegistered(String name) throws BookAlreadyRegisteredException{
