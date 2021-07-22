@@ -2,7 +2,9 @@ package one.digitalinnovation.bookstock.controller;
 
 import one.digitalinnovation.bookstock.builder.BookDTOBuilder;
 import one.digitalinnovation.bookstock.dto.BookDTO;
+import one.digitalinnovation.bookstock.dto.QuantityDTO;
 import one.digitalinnovation.bookstock.exception.BookNotFoundException;
+import one.digitalinnovation.bookstock.exception.BookStockExceededException;
 import one.digitalinnovation.bookstock.service.BookService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,14 +54,11 @@ class BookControllerTest {
 
     @Test
     void whenPOSTIsCalledThenBookIsCreated() throws Exception {
-        //Testes POST on the API
-
+        //POST tests on the API
         //Given:
         BookDTO bookDTO = BookDTOBuilder.builder().build().toBookDTO();
-
         //When:
         Mockito.when(bookService.createBook(bookDTO)).thenReturn(bookDTO);
-
         //Then:
         mockMvc.perform(post(BOOK_API_URL_PATH)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -75,7 +74,6 @@ class BookControllerTest {
         //Given:
         BookDTO bookDTO = BookDTOBuilder.builder().build().toBookDTO();
         bookDTO.setAuthor(null);
-
         //Then:
         mockMvc.perform(post(BOOK_API_URL_PATH)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -160,5 +158,26 @@ class BookControllerTest {
         mockMvc.perform(MockMvcRequestBuilders.delete(BOOK_API_URL_PATH+"/"+INVALID_BOOK_ID)
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void whenPATCHIsCalledToIncrementDiscountThenOKstatusIsReturned() throws Exception {
+        QuantityDTO quantityDTO = QuantityDTO.builder()
+                .quantity(10)
+                .build();
+
+        BookDTO bookDTO = BookDTOBuilder.builder().build().toBookDTO();
+        bookDTO.setQuantity(bookDTO.getQuantity() + quantityDTO.getQuantity());
+
+        when(bookService.increment(VALID_BOOK_ID, quantityDTO.getQuantity())).thenReturn(bookDTO);
+
+        mockMvc.perform(MockMvcRequestBuilders.patch(BOOK_API_URL_PATH + "/" + VALID_BOOK_ID
+                + BOOK_API_SUBPATH_INCREMENT_URL)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(asJsonString(quantityDTO))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.name", is(bookDTO.getName())))
+                .andExpect(jsonPath("$.author", is(bookDTO.getAuthor())))
+                .andExpect(jsonPath("$.genre", is(bookDTO.getGenre().toString())))
+                .andExpect(jsonPath("$.quantity", is(bookDTO.getQuantity())));
     }
 }

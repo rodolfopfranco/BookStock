@@ -2,8 +2,10 @@ package one.digitalinnovation.bookstock.controller;
 
 import lombok.AllArgsConstructor;
 import one.digitalinnovation.bookstock.dto.BookDTO;
+import one.digitalinnovation.bookstock.dto.QuantityDTO;
 import one.digitalinnovation.bookstock.exception.BookAlreadyRegisteredException;
 import one.digitalinnovation.bookstock.exception.BookNotFoundException;
+import one.digitalinnovation.bookstock.exception.BookStockExceededException;
 import one.digitalinnovation.bookstock.service.BookService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -39,5 +41,10 @@ public class BookController implements BookControllerDocs{
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteById(@PathVariable Long id) throws BookNotFoundException{
         bookService.deleteById(id);
+    }
+
+    @PatchMapping("/{id}/increment")
+    public BookDTO increment(@PathVariable Long id, @RequestBody @Valid QuantityDTO quantityDTO) throws BookStockExceededException, BookNotFoundException {
+        return bookService.increment(id, quantityDTO.getQuantity());
     }
 }
